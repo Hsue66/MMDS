@@ -2,6 +2,9 @@ import os
 import os.path
 import binascii
 import random
+import time
+import nltk
+from nltk.corpus import stopwords
 
 
 def readData(path):
@@ -28,6 +31,24 @@ def makeShingle(dataset, shingle_num):
                 shingle_cnt = shingle_cnt + 1
         shingles.append(shingle)
     return shingles, shingle_cnt
+
+def makeStopShingle(dataset, shingle_num):
+    stop_words = set(stopwords.words('english'))
+    shingles = []
+    shingle_cnt = 0
+    for data in dataset:
+        shingle = []
+        for i in range(0,len(data)-shingle_num):
+            if data[i] in stop_words:
+                str = ' '.join(data[i:i+shingle_num])
+                crc = binascii.crc32(str.encode('utf8')) & 0xffffffff
+                #shingle.append(str)
+                if crc not in shingle:
+                    shingle.append(crc)
+                    shingle_cnt = shingle_cnt + 1
+        shingles.append(shingle)
+    return shingles, shingle_cnt
+
 
 def shingleJaccard(shingles, id):
     source = shingles[id]
@@ -123,25 +144,80 @@ def sigJaccard(signature,hash_num,id):
                     same = same +1
             print('%d:%d = %f'%(id,i,same/hash_num))
 
+def docTosig(signature,hash_num):
+    numOfDocs = len(signature[0])
+    result = []
+    for d in range(0,numOfDocs):
+        dochash = []
+        for i in range(0,hash_num):
+            dochash.append(signature[i][d])
+        result.append(dochash)
+
+    return result
+
+def divNhash(signature,hash_num, band_num):
+    i = 0
+    hashT = [[0 for i in range(len(signature))] for j in range(int(hash_num/band_num))]
+
+    for doc_idx in range(len(signature)):
+        for i in range(0, hash_num, band_num):
+            band_idx = int(i/band_num)
+            hashT[band_idx][doc_idx] = hash(tuple(signature[doc_idx][i:i+band_num]))
+    return hashT
+
+def LSHJaccard(signature, hashT, hash_num, band_num, id):
+    numOfDocs = len(signature)
+    for i in range(numOfDocs):
+        if id != i:
+            prob = 0
+            for h in range(0, hash_num, band_num):
+                band_idx = int(h/band_num)
+                div = 1/(hash_num/band_num)
+                val = 0
+                if hashT[band_idx][id] == hashT[band_idx][i]:
+                    source = set(signature[id][h:h+band_num])
+                    target = set(signature[i][h:h+band_num])
+                    total = len(set().union(source,target))
+                    same = len(source&target)
+                    #print('hash: %d, id: %d %f' %(band_idx,i,same/total))
+                    val = same/total
+                val = val*div
+                prob += val
+                #print(i,val,prob)
+            if(prob > 0.5):
+                print("id:%d, prob: %f" %(i,prob))
 
 if __name__ == "__main__":
     data = readData('./data')
-
     shingle_num = 2;
 
-    shingles, shingle_cnt = makeShingle(data,shingle_num)
-    print("< Shingle Jaccard >")
-    shingleJaccard(shingles,1)
+    ### stopword처리한거
+    shingles, shingle_cnt = makeStopShingle(data,shingle_num)
 
-    #print(shingle_cnt)
-    hash_num = 5
+    ### stopword처리안한거
+    #shingles, shingle_cnt = makeShingle(data,shingle_num)
+    print("< Shingle Jaccard >")
+    t1 = time.time()
+    shingleJaccard(shingles,1)
+    t2 = time.time()-t1
+    print("----------",t2)
+
+    hash_num = 100
     signature = makeSignature(shingles,shingle_cnt, hash_num)
     print("< MinHash Jaccard >")
+    t1 = time.time()
     sigJaccard(signature,hash_num, 1)
+    t2 = time.time()-t1
+    print("----------",t2)
 
-    print(signature)
-    s1 = signature[0]
-    for s2 in range(1,len(signature)):
-        s1 = list(zip(s1,signature[s2]))
+    #print(signature)
+    transSig = docTosig(signature,hash_num)
 
-    print(s1)
+    band_num = 5
+    hashT = divNhash(transSig,hash_num, band_num)
+    print("< LSH Jaccard >")
+    t1 = time.time()
+    LSHJaccard(transSig, hashT, hash_num, band_num,1)
+    t2 = time.time()-t1
+    print("----------",t2)
+    #"""
