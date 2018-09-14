@@ -153,7 +153,7 @@ def sigJaccard(signature,hash_num,id,titles):
             for h in range(0,hash_num):
                 if(signature[h][id] == signature[h][i]):
                     same = same +1
-            if(same/hash_num > 0.01):
+            if same/hash_num > 0.01:
                 prob.append([same/hash_num,titles[i]])
                 #print('%s %f'%(titles[i],same/hash_num))
 
@@ -197,9 +197,9 @@ def divNhash2(signature,hash_num, band_num):
         for idx in range(0, band_num):
             #print(idx*rowNum, (idx+1)*rowNum)
             hashT[doc_idx][idx] = hash(tuple(signature[doc_idx][idx*rowNum:(idx+1)*rowNum]))
-            if doc_idx == 0:
-                print(hash(tuple(signature[doc_idx][idx*rowNum:(idx+1)*rowNum])))
-    print(hashT[0])
+            #if doc_idx == 0:
+            #    print(hash(tuple(signature[doc_idx][idx*rowNum:(idx+1)*rowNum])))
+    #print(hashT[0])
     return hashT
 
 def divNhashBYmyself(signature,hash_num, band_num):
@@ -241,6 +241,9 @@ def LSHJaccard(signature, hashT, hash_num, band_num, id,titles):
 def LSHJaccard2(signature, hashT, hash_num, band_num, id,titles):
     numOfDocs = len(signature)
     probabilities = [0 for x in range(numOfDocs)]
+
+    prob = []
+    probID = []
     for b in range(band_num):
         for i in range(numOfDocs):
             if hashT[id][b] == hashT[i][b] and id != i:
@@ -251,10 +254,14 @@ def LSHJaccard2(signature, hashT, hash_num, band_num, id,titles):
                 total = len(set().union(source,target))
                 same = len(source&target)
                 probabilities[i] = same/total
+                if same/hash_num > 0.01 and i not in probID:
+                    probID.append(i)
+                    prob.append([same/hash_num,titles[i]])
 
-    for i in range(numOfDocs):
-        if(probabilities[i] > 0.01):
-            print("id:%d %s, prob: %f" %(i,titles[i], probabilities[i]))
+    prob2 = sorted(prob, key=itemgetter(0), reverse=True)
+    for prob in prob2:
+        print(prob)
+
 
 
 def lenChk(data,contents,titles):
@@ -312,9 +319,9 @@ if __name__=="__main__":
     hash_num = 100
     signature = makeSignature(shingles,shingle_cnt, hash_num)
     print("< MinHash Jaccard >")
-#    t1 = time.time()
-#    sigJaccard(signature,hash_num, 6,titles)
-#    t2 = time.time()-t1
+    t1 = time.time()
+    sigJaccard(signature,hash_num, 6,titles)
+    t2 = time.time()-t1
 #    print("----------",t2)
 
 
@@ -327,7 +334,7 @@ if __name__=="__main__":
     #"""
     print("< LSH Jaccard >")
     t1 = time.time()
-    LSHJaccard2(transSig, hashT, hash_num, band_num,1,titles)
+    LSHJaccard2(transSig, hashT, hash_num, band_num,6,titles)
     t2 = time.time()-t1
     print("----------",t2)
     #"""
