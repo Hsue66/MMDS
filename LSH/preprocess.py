@@ -56,7 +56,7 @@ def read_daily_and_convert_shingle(path, shingle_num):
         total number of shingles
     """
     with open(path, 'r') as f:
-        file = json.load(f)
+        files = json.load(f)
     ### 지울것
     #file = file[0:1000]
 
@@ -64,9 +64,9 @@ def read_daily_and_convert_shingle(path, shingle_num):
     titles = []
     shingle_cnt = 0
     print('read daily articles and convert it to shingles ...')
-    for i in tqdm(range(len(file))):
-        titles.append(file[i]['title'])
-        body = file[i]['body']
+    for i in tqdm(range(len(files))):
+        titles.append(files[i]['title'])
+        body = files[i]['body']
         shingle = []
         for i in range(0,len(body)-shingle_num):
             str = ' '.join(body[i:i+shingle_num])
@@ -76,7 +76,7 @@ def read_daily_and_convert_shingle(path, shingle_num):
                 shingle_cnt = shingle_cnt + 1
         shingles.append(shingle)
 
-    return file, titles, shingles, shingle_cnt
+    return files, titles, shingles, shingle_cnt
 
 def shingleJaccard(shingles, id,titles):
     print(titles[id])
@@ -224,6 +224,11 @@ def LSHJaccard(signature, hashT, bucketlist, id,titles):
                     print('%d%s: %f'%(i,titles[i],prob))
 
 def find_clustroid(signature, hashT, bucketlist):
+    """
+    find clustroid
+    : left_articles :
+        set of clustroids
+    """
     numOfDocs = len(titles)
     left_aritcles = set([])
     saved_jaccard = dict()
@@ -256,22 +261,60 @@ def find_clustroid(signature, hashT, bucketlist):
         cId = cluster[distance.index(max(distance))]
         left_aritcles.add(cId)
 
-    print(numOfDocs)
-    print(len(left_aritcles))
+    #print(numOfDocs)
+    #print(len(left_aritcles))
     return left_aritcles
 
-def save_file(idlist, file):
-    print('make dialy json file ...')
-    for date in tqdm(datedict.keys()):
-        filename = './NCdata/'+date+'.json'
-        with open(filename, 'w', encoding='utf-8') as f:
-            json.dump(datedict[date], f, ensure_ascii=False)
+def save_file(idlist, files):
+    print('make new json file ...')
+    newfile = []
+    for id in tqdm(idlist):
+        newfile.append(files[id])
 
+    filename = './editNCdata/201703.json'
+    with open(filename, 'w', encoding='utf-8') as f:
+        json.dump(newfile, f, ensure_ascii=False)
+
+def save_newfile(path, newfile):
+    filename = './editNCdata/'+path
+    with open(filename, 'w', encoding='utf-8') as f:
+        json.dump(newfile, f, ensure_ascii=False)
 
 
 if __name__=="__main__":
     #month_to_daily("201703.json")
-    file, titles, shingles, total_shingle = read_daily_and_convert_shingle('./NCdata/2017-03-30.json',2)
+    shingle_num = 2
+    hash_num = 100 
+    band_num = 50
+
+    path = "201703.json"
+    datedict = make_datedict(path)
+    datelist = list(datedict.keys())
+
+    newfile = []
+    file_length = 0
+    t1 = time.time()
+    for filename in datelist:
+        print('------'+filename+'------')
+        files, titles, shingles, total_shingle = read_daily_and_convert_shingle('./NCdata/'+filename+'.json',shingle_num)
+        signature = make_signature(shingles, total_shingle, hash_num)
+        hashT, bucketlist = hash_signature(signature, hash_num, band_num)
+
+        idlist = find_clustroid(signature, hashT, bucketlist)
+
+        file_length = file_length + len(files)
+        for id in idlist:
+            newfile.append(files[id])
+
+    print(file_length)
+    print(len(newfile))
+    save_newfile(path, newfile)
+
+    t2 = time.time()-t1
+    print('take %f'%(t2))
+
+    """
+    files, titles, shingles, total_shingle = read_daily_and_convert_shingle('./NCdata/2017-03-30.json',2)
     #shingleJaccard(shingles,69,titles)
 
     hash_num = 100
@@ -288,4 +331,5 @@ if __name__=="__main__":
     t2 = time.time()-t1
     print('take %f'%(t2))
 
-    save_file(idlist, file)
+    save_file(idlist, files)
+    """
