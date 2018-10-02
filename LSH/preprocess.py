@@ -146,7 +146,7 @@ def find_clustroid(signature, hashT, bucketlist, jaccard_sim):
     : param jaccard_sim :  jaccard similarity
     : return left_articles :  set of clustroids
     """
-    numOfDocs = len(titles)
+    numOfDocs = len(signature)
     left_aritcles = set([])
     saved_jaccard = dict()
 
@@ -231,6 +231,47 @@ def read_and_check(path):
                 print(files[i]['title'])
     print(cnt)
 
+
+def main(args):
+    """
+    do preprocessing
+    : param args :  arguments
+    """
+    shingle_num = args.shingle_num
+    hash_num = args.hash_num
+    band_num = args.band_num
+    jaccard_sim = args.jaccard_sim
+
+    rawfile_list = os.listdir('./Data')
+    for rawfile in rawfile_list:
+        print('processing '+rawfile+' ...')
+        utils.month_to_daily(rawfile)
+        datelist = os.listdir('./NCdata')
+
+        newfile = []
+        file_length = 0
+        t1 = time.time()
+        for filename in datelist:
+            print('------'+filename+'------')
+
+            files, titles, shingles, total_shingle = utils.read_daily_and_convert_shingle('./NCdata/'+filename,shingle_num)
+            if total_shingle > 0:
+                signature = make_signature(shingles, total_shingle, hash_num)
+                hashT, bucketlist = hash_signature(signature, hash_num, band_num)
+
+                idlist = find_clustroid(signature, hashT, bucketlist, jaccard_sim)
+
+            file_length = file_length + len(files)
+            for id in idlist:
+                newfile.append(files[id])
+
+        print(file_length)
+        print(len(newfile))
+        utils.save_newfile(rawfile, newfile)
+
+        t2 = time.time()-t1
+        print('take %f'%(t2))
+        utils.remove('./NCdata')
 
 
 if __name__=="__main__":
