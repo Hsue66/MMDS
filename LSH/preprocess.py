@@ -237,15 +237,16 @@ def main(args):
     do preprocessing
     : param args :  arguments
     """
+    folder = args.folder
     shingle_num = args.shingle_num
     hash_num = args.hash_num
     band_num = args.band_num
     jaccard_sim = args.jaccard_sim
 
-    rawfile_list = os.listdir('./Data')
+    rawfile_list = os.listdir(folder)
     for rawfile in rawfile_list:
         print('processing '+rawfile+' ...')
-        utils.month_to_daily(rawfile)
+        utils.month_to_daily(folder, rawfile)
         datelist = os.listdir('./NCdata')
 
         newfile = []
@@ -254,6 +255,7 @@ def main(args):
         for filename in datelist:
             print('------'+filename+'------')
 
+            idlist = []
             files, titles, shingles, total_shingle = utils.read_daily_and_convert_shingle('./NCdata/'+filename,shingle_num)
             if total_shingle > 0:
                 signature = make_signature(shingles, total_shingle, hash_num)
@@ -272,7 +274,7 @@ def main(args):
         t2 = time.time()-t1
         print('take %f'%(t2))
         utils.remove('./NCdata')
-
+    #"""
 
 if __name__=="__main__":
     shingle_num = 2
@@ -280,7 +282,7 @@ if __name__=="__main__":
     band_num = 50
     jaccard_sim = 0.05
 
-    rawfile_list = os.listdir('./Data')
+    rawfile_list = os.listdir('./qData')
     for rawfile in rawfile_list:
         print('processing '+rawfile+' ...')
         utils.month_to_daily(rawfile)

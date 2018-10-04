@@ -42,7 +42,7 @@ def remove(path):
         os.remove(os.path.join(path, file))
 
 
-def month_to_daily(path):
+def month_to_daily(folder, path):
     """
     separate articles by date (delete articles under 30 words)
     : param path : date.json    ex) '2017-01-01.json',...
@@ -50,7 +50,7 @@ def month_to_daily(path):
     print('divide aritcle by date...')
     datedict = make_datedict(path)
     data = {}
-    with open('./Data/'+path, 'r', encoding='utf-8') as f:
+    with open(os.path.join(folder,path), 'r', encoding='utf-8') as f:
         data = json.load(f)
 
     for d in tqdm(data):
